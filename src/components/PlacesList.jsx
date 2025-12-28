@@ -1,7 +1,22 @@
-import React from 'react'
+import React, { useState } from 'react'
 import './PlacesList.css'
 
+const ITEMS_PER_PAGE = 10
+
 function PlacesList({ places, userLocation, onPlaceClick, isLoading, isFavorite, onToggleFavorite }) {
+  const [currentPage, setCurrentPage] = useState(1)
+  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
+
+  // Calculate pagination
+  const totalPages = Math.ceil(places.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const currentPlaces = places.slice(startIndex, endIndex)
+
+  // Reset to page 1 when places change
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [places.length])
   const calculateDistance = (placeLocation) => {
     if (!userLocation) return null
     
@@ -75,13 +90,43 @@ function PlacesList({ places, userLocation, onPlaceClick, isLoading, isFavorite,
     )
   }
 
+  const goToPage = (page) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <div className="places-list-container">
       <div className="places-list-header">
-        <h2>Found {places.length} places</h2>
+        <div className="header-top">
+          <h2>Found {places.length} places</h2>
+          <div className="view-toggle">
+            <button
+              className={`view-button ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              title="Grid view"
+            >
+              ⊞
+            </button>
+            <button
+              className={`view-button ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+              title="List view"
+            >
+              ☰
+            </button>
+          </div>
+        </div>
+        {places.length > ITEMS_PER_PAGE && (
+          <div className="pagination-info">
+            Showing {startIndex + 1}-{Math.min(endIndex, places.length)} of {places.length}
+          </div>
+        )}
       </div>
-      <div className="places-list">
-        {places.map((place) => {
+      <div className={`places-list ${viewMode}`}>
+        {currentPlaces.map((place) => {
           const distance = calculateDistance(place.geometry.location)
           const photoUrl = place.photos?.[0] 
             ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
@@ -91,12 +136,23 @@ function PlacesList({ places, userLocation, onPlaceClick, isLoading, isFavorite,
           return (
             <div
               key={place.place_id}
-              className="place-card"
+              className={`place-card ${photoUrl ? 'has-image' : ''}`}
               onClick={() => onPlaceClick(place)}
             >
               {photoUrl && (
                 <div className="place-card-image">
                   <img src={photoUrl} alt={place.name} />
+                  {/* Overlay with rating for grid view */}
+                  {viewMode === 'grid' && place.rating && (
+                    <div className="image-overlay">
+                      <div className="overlay-content">
+                        <div className="overlay-rating">
+                          {renderStars(place.rating)}
+                          <span className="overlay-rating-value">{place.rating.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="place-card-content">
@@ -114,7 +170,12 @@ function PlacesList({ places, userLocation, onPlaceClick, isLoading, isFavorite,
                   </button>
                 </div>
                 
-                {place.rating && renderStars(place.rating)}
+                {/* Show rating in list view, hide in grid view (shown in overlay) */}
+                {place.rating && viewMode === 'list' && (
+                  <div className="rating-section">
+                    {renderStars(place.rating)}
+                  </div>
+                )}
                 
                 <div className="place-card-info">
                   {distance && (
@@ -170,6 +231,54 @@ function PlacesList({ places, userLocation, onPlaceClick, isLoading, isFavorite,
           )
         })}
       </div>
+      
+      {/* Pagination */}
+      {places.length > ITEMS_PER_PAGE && (
+        <div className="pagination">
+          <button
+            className="pagination-button"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            aria-label="Previous page"
+          >
+            ← Previous
+          </button>
+          
+          <div className="pagination-numbers">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+              // Show first page, last page, current page, and pages around current
+              if (
+                page === 1 ||
+                page === totalPages ||
+                (page >= currentPage - 1 && page <= currentPage + 1)
+              ) {
+                return (
+                  <button
+                    key={page}
+                    className={`pagination-number ${currentPage === page ? 'active' : ''}`}
+                    onClick={() => goToPage(page)}
+                    aria-label={`Go to page ${page}`}
+                  >
+                    {page}
+                  </button>
+                )
+              } else if (page === currentPage - 2 || page === currentPage + 2) {
+                return <span key={page} className="pagination-ellipsis">...</span>
+              }
+              return null
+            })}
+          </div>
+          
+          <button
+            className="pagination-button"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            aria-label="Next page"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
