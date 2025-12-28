@@ -128,9 +128,17 @@ function PlacesList({ places, userLocation, onPlaceClick, isLoading, isFavorite,
       <div className={`places-list ${viewMode}`}>
         {currentPlaces.map((place) => {
           const distance = calculateDistance(place.geometry.location)
-          const photoUrl = place.photos?.[0] 
-            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
-            : null
+          
+          // Get photo URL with error handling
+          let photoUrl = null
+          if (place.photos && place.photos.length > 0 && place.photos[0].photo_reference) {
+            try {
+              photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+            } catch (error) {
+              console.error('Error creating photo URL:', error)
+            }
+          }
+          
           const isOpen = place.opening_hours?.open_now
 
           return (
@@ -139,22 +147,37 @@ function PlacesList({ places, userLocation, onPlaceClick, isLoading, isFavorite,
               className={`place-card ${photoUrl ? 'has-image' : ''}`}
               onClick={() => onPlaceClick(place)}
             >
-              {photoUrl && (
-                <div className="place-card-image">
-                  <img src={photoUrl} alt={place.name} />
-                  {/* Overlay with rating for grid view */}
-                  {viewMode === 'grid' && place.rating && (
-                    <div className="image-overlay">
-                      <div className="overlay-content">
-                        <div className="overlay-rating">
-                          {renderStars(place.rating)}
-                          <span className="overlay-rating-value">{place.rating.toFixed(1)}</span>
+              <div className="place-card-image">
+                {photoUrl ? (
+                  <>
+                    <img 
+                      src={photoUrl} 
+                      alt={place.name}
+                      onError={(e) => {
+                        console.error('Image failed to load:', photoUrl)
+                        e.target.style.display = 'none'
+                        e.target.parentElement.classList.add('no-image')
+                      }}
+                    />
+                    {/* Overlay with rating for grid view */}
+                    {viewMode === 'grid' && place.rating && (
+                      <div className="image-overlay">
+                        <div className="overlay-content">
+                          <div className="overlay-rating">
+                            {renderStars(place.rating)}
+                            <span className="overlay-rating-value">{place.rating.toFixed(1)}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </>
+                ) : (
+                  <div className="no-image-placeholder">
+                    <span className="placeholder-icon">📍</span>
+                    <span className="placeholder-text">{place.name}</span>
+                  </div>
+                )}
+              </div>
               <div className="place-card-content">
                 <div className="place-card-header">
                   <h3 className="place-name">{place.name}</h3>

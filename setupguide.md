@@ -27,9 +27,12 @@ Before you begin, make sure you have the following installed on your system:
 1. In the Google Cloud Console, navigate to **"APIs & Services" > "Library"**
 2. Search for and enable the following APIs:
    - **Maps JavaScript API** - For displaying the map
-   - **Places API** - For searching and getting place details
+   - **Places API** - For searching and getting place details (REQUIRED for photos)
+   - **Places API (New)** - If available, enable this as well
    - **Geocoding API** - For converting addresses to coordinates
    - **Directions API** - For route planning (optional but recommended)
+
+⚠️ **Important for Photos**: Make sure **Places API** is enabled. Without it, place photos will not load.
 
 ### 1.3 Create API Key
 

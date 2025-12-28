@@ -30,6 +30,10 @@ export const searchNearbyPlaces = async (
       service.nearbySearch(request, (results, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK) {
           let filteredResults = results
+          
+          // Note: nearbySearch may not always return photos
+          // Some places may not have photos available
+          // Photos will be displayed if available, otherwise a placeholder is shown places
 
           // Filter by rating
           if (minRating > 0) {
